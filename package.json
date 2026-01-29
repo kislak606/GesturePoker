@@ -1,0 +1,61 @@
+{
+  "name": "poker",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "poker but with ur actual hands.",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "build": "tsc && vite build",
+    "start": "npm run build && electron .",
+    "dev": "npm run build && electron .",
+    "package": "electron-builder"
+  },
+  "build": {
+    "appId": "com.poker.gestures",
+    "productName": "Poker Gestures",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Flash5445/poker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Flash5445/poker/issues"
+  },
+  "homepage": "https://github.com/Flash5445/poker#readme",
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.14",
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12",
+    "happy-dom": "^20.0.11",
+    "jsdom": "^27.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6",
+    "vitest": "^4.0.14"
+  },
+  "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/drawing_utils": "^0.3.1675466124",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "zod": "^4.1.13"
+  }
+}

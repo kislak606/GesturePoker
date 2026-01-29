@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesture Poker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f1419;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            position: relative;
+        }
+
+        /* Poker Table */
+        #poker-table {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at center, #1a4d2e 0%, #0f1419 100%);
+            position: relative;
+        }
+
+        #table-surface {
+            width: 80%;
+            height: 70%;
+            background: linear-gradient(135deg, #0d3d1f 0%, #1a5c2e 50%, #0d3d1f 100%);
+            border-radius: 45% / 50%;
+            border: 15px solid #8b4513;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Community Cards */
+        #community-cards {
+            position: absolute;
+            display: flex;
+            gap: 10px;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .card {
+            width: 70px;
+            height: 100px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .card.back {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+        }
+
+        .card.hearts, .card.diamonds {
+            color: #dc2626;
+        }
+
+        .card.clubs, .card.spades {
+            color: #000;
+        }
+
+        .card-rank {
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            font-size: 20px;
+        }
+
+        .card-suit {
+            font-size: 40px;
+        }
+
+        /* Pot Display */
+        #pot-display {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 25px;
+            border: 3px solid #fbbf24;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+
+        /* Players */
+        .player {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #4b5563;
+            min-width: 150px;
+        }
+
+        .player.active {
+            border-color: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .player.folded {
+            opacity: 0.5;
+        }
+
+        .player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .player-chips {
+            color: #fbbf24;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .player-bet {
+            color: #10b981;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .player-cards {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .player-cards .card {
+            width: 45px;
+            height: 65px;
+            font-size: 16px;
+        }
+
+        .player-cards .card-rank {
+            font-size: 14px;
+        }
+
+        .player-cards .card-suit {
+            font-size: 24px;
+        }
+
+        /* Player positions */
+        #player-0 {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #player-1 {
+            top: 20%;
+            left: 10%;
+        }
+
+        #player-2 {
+            top: 20%;
+            right: 10%;
+        }
+
+        /* Camera Feed (PiP) */
+        #camera-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 225px;
+            border: 3px solid #3b82f6;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+            z-index: 100;
+        }
+
+        #camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Gesture Indicator */
+        #gesture-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid #3b82f6;
+            z-index: 101;
+        }
+
+        /* Game Info */
+        #game-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #3b82f6;
+            min-width: 250px;
+        }
+
+        #game-info h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #3b82f6;
+        }
+
+        #game-info p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        /* Loading Screen */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            text-align: center;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px 60px;
+            border-radius: 12px;
+        }
+
+        /* Dealer Button */
+        .dealer-button {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #dc2626;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Gesture Controls Panel */
+        #gesture-controls-toggle {
+            position: absolute;
+            top: 240px;
+            left: 20px;
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 102;
+        }
+
+        #gesture-controls-toggle:hover {
+            background: #2563eb;
+        }
+
+        #gesture-controls-panel {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #3b82f6;
+            max-width: 700px;
+            z-index: 1000;
+            display: none;
+        }
+
+        #gesture-controls-panel.visible {
+            display: block;
+        }
+
+        #gesture-controls-panel h2 {
+            margin: 0 0 15px 0;
+            font-size: 22px;
+            color: #3b82f6;
+            text-align: center;
+        }
+
+        .gesture-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .gesture-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #4b5563;
+        }
+
+        .gesture-item.available {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .gesture-item.unavailable {
+            opacity: 0.5;
+        }
+
+        .gesture-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .gesture-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .gesture-action {
+            font-size: 14px;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .gesture-item.available .gesture-action {
+            color: #10b981;
+        }
+
+        .gesture-description {
+            font-size: 13px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        .gesture-emoji {
+            font-size: 32px;
+            margin-right: 8px;
+        }
+
+        .gesture-notes {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            border: 1px solid #3b82f6;
+        }
+
+        .gesture-notes h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #3b82f6;
+        }
+
+        .gesture-notes ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #d1d5db;
+        }
+
+        .close-panel-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 24px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-panel-btn:hover {
+            color: #fff;
+        }
+
+        /* Showdown Modal */
+        #showdown-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        #showdown-modal.visible {
+            display: flex;
+        }
+
+        .showdown-content {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 30px;
+            border-radius: 16px;
+            border: 3px solid #fbbf24;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        .showdown-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #fbbf24;
+            margin-bottom: 20px;
+        }
+
+        .showdown-winner-section {
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .showdown-winner-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .showdown-player {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .showdown-player-info {
+            flex: 1;
+        }
+
+        .showdown-player-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .showdown-hand-ranking {
+            font-size: 16px;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .showdown-player-cards {
+            display: flex;
+            gap: 5px;
+        }
+
+        .showdown-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #10b981;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .showdown-all-hands {
+            margin-top: 20px;
+        }
+
+        .showdown-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #9ca3af;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .showdown-continue-btn {
+            width: 100%;
+            padding: 15px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .showdown-continue-btn:hover {
+            background: #2563eb;
+        }
+
+        /* Card Zoom Overlay */
+        #card-zoom-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            flex-direction: column;
+        }
+
+        #card-zoom-overlay.visible {
+            display: flex;
+        }
+
+        .card-zoom-hint {
+            color: #10b981;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        #card-zoom-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 90%;
+        }
+
+        .zoomed-card {
+            width: 200px;
+            height: 280px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+
+        .zoomed-card:hover {
+            transform: scale(1.05);
+        }
+
+        .zoomed-card.hearts, .zoomed-card.diamonds {
+            color: #dc2626;
+        }
+
+        .zoomed-card.clubs, .zoomed-card.spades {
+            color: #000;
+        }
+
+        .zoomed-card-rank {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .zoomed-card-suit {
+            font-size: 120px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="poker-table">
+            <div id="table-surface">
+                <!-- Community Cards -->
+                <div id="community-cards"></div>
+
+                <!-- Pot Display -->
+                <div id="pot-display">Pot: $0</div>
+
+                <!-- Players -->
+                <div id="player-0" class="player">
+                    <div class="dealer-button" style="display: none;">D</div>
+                    <div class="player-name">You</div>
+                    <div class="player-chips">$1000</div>
+                    <div class="player-bet"></div>
+                    <div class="player-cards"></div>
+                </div>
+
+                <div id="player-1" class="player">
+                    <div class="dealer-button" style="display: none;">D</div>
+                    <div class="player-name">Bot 1</div>
+                    <div class="player-chips">$1000</div>
+                    <div class="player-bet"></div>
+                    <div class="player-cards"></div>
+                </div>
+
+                <div id="player-2" class="player">
+                    <div class="dealer-button" style="display: none;">D</div>
+                    <div class="player-name">Bot 2</div>
+                    <div class="player-chips">$1000</div>
+                    <div class="player-bet"></div>
+                    <div class="player-cards"></div>
+                </div>
+            </div>
+
+            <!-- Camera Feed (PiP) -->
+            <div id="camera-container">
+                <video id="camera-feed" autoplay playsinline></video>
+                <canvas id="canvas-overlay"></canvas>
+            </div>
+
+            <!-- Gesture Indicator -->
+            <div id="gesture-indicator">No gesture detected</div>
+
+            <!-- Game Info -->
+            <div id="game-info">
+                <h3>Game Status</h3>
+                <p id="game-phase">Phase: Waiting</p>
+                <p id="current-player">Current: -</p>
+                <p id="current-bet">To Call: $0</p>
+            </div>
+
+            <!-- Gesture Controls Toggle -->
+            <button id="gesture-controls-toggle">Show Controls</button>
+
+            <!-- Gesture Controls Panel -->
+            <div id="gesture-controls-panel">
+                <button class="close-panel-btn" id="close-panel">×</button>
+                <h2>Gesture Controls</h2>
+
+                <div class="gesture-grid">
+                    <div class="gesture-item" data-gesture="thumbs-up">
+                        <div class="gesture-header">
+                            <div class="gesture-name">
+                                <span class="gesture-emoji">👍</span>
+                                Thumbs Up
+                            </div>
+                            <div class="gesture-action">CALL</div>
+                        </div>
+                        <div class="gesture-description">
+                            Extend thumb upward, curl other fingers. Match current bet.
+                        </div>
+                    </div>
+
+                    <div class="gesture-item" data-gesture="thumbs-down">
+                        <div class="gesture-header">
+                            <div class="gesture-name">
+                                <span class="gesture-emoji">👎</span>
+                                Thumbs Down
+                            </div>
+                            <div class="gesture-action">FOLD</div>
+                        </div>
+                        <div class="gesture-description">
+                            Extend thumb downward, curl other fingers. Leave the hand.
+                        </div>
+                    </div>
+
+                    <div class="gesture-item" data-gesture="pointer-up">
+                        <div class="gesture-header">
+                            <div class="gesture-name">
+                                <span class="gesture-emoji">☝</span>
+                                Pointer Finger Up
+                            </div>
+                            <div class="gesture-action">CHECK</div>
+                        </div>
+                        <div class="gesture-description">
+                            Extend index finger upward, curl other fingers. Pass action when no bet to call.
+                        </div>
+                    </div>
+
+                    <div class="gesture-item" data-gesture="open-palm">
+                        <div class="gesture-header">
+                            <div class="gesture-name">
+                                <span class="gesture-emoji">✋</span>
+                                Open Palm
+                            </div>
+                            <div class="gesture-action">SAFE HAND</div>
+                        </div>
+                        <div class="gesture-description">
+                            Extend all fingers. Neutral/waiting state - no action triggered.
+                        </div>
+                    </div>
+
+                    <div class="gesture-item" data-gesture="ok-symbol">
+                        <div class="gesture-header">
+                            <div class="gesture-name">
+                                <span class="gesture-emoji">👌</span>
+                                OK Symbol
+                            </div>
+                            <div class="gesture-action">RAISE</div>
+                        </div>
+                        <div class="gesture-description">
+                            Circle with thumb + index, middle/ring/pinky fingers extended. Drag hand to set amount.
+                        </div>
+                    </div>
+
+                    <div class="gesture-item" data-gesture="circle">
+                        <div class="gesture-header">
+                            <div class="gesture-name">
+                                <span class="gesture-emoji">⭕</span>
+                                Circle (Curled)
+                            </div>
+                            <div class="gesture-action">ZOOM CARDS</div>
+                        </div>
+                        <div class="gesture-description">
+                            Circle with thumb + index, all other fingers curled. Zooms table cards fullscreen.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gesture-notes">
+                    <h3>Important Notes</h3>
+                    <ul>
+                        <li><strong>Confirmation:</strong> Hold gesture steady for 0.5 seconds to confirm action</li>
+                        <li><strong>Raise Gesture:</strong> After OK symbol, move hand left/right to adjust bet amount ($10 increments)</li>
+                        <li><strong>All-in:</strong> During raise, move hand upward quickly to go all-in</li>
+                        <li><strong>Raise Confirmation:</strong> Hold still for 5 seconds to confirm raise amount</li>
+                        <li><strong>Detection:</strong> Gestures need 70%+ confidence to register</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Loading Screen -->
+            <div class="loading" id="loading">Loading MediaPipe...</div>
+        </div>
+
+        <!-- Showdown Modal -->
+        <div id="showdown-modal">
+            <div class="showdown-content">
+                <h2 class="showdown-title">Showdown</h2>
+                <div id="showdown-winners"></div>
+                <div class="showdown-all-hands" id="showdown-all-hands"></div>
+                <button class="showdown-continue-btn" id="showdown-continue">Continue to Next Hand</button>
+            </div>
+        </div>
+
+        <!-- Card Zoom Overlay -->
+        <div id="card-zoom-overlay">
+            <div class="card-zoom-hint">Release gesture to close</div>
+            <div id="card-zoom-container"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script>
+        window.addEventListener('error', (e) => {
+            console.error('Global error:', e.error);
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.textContent = 'Error: ' + e.message;
+            }
+        });
+    </script>
+    <script type="module" src="dist/renderer.js"></script>
+</body>
+</html>
